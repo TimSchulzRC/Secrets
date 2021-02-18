@@ -1,7 +1,7 @@
 const bodyParser = require("body-parser");
 const express = require("express");
 const ejs = require("ejs");
-
+const mongoose = require("mongoose");
 const app = express();
 
 app.use(express.static("public"));
@@ -12,17 +12,71 @@ app.use(
   })
 );
 
-app.get("/", (rq, res) => {
+mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true });
+
+const userSchema = {
+  email: String,
+  password: String,
+};
+
+const User = new mongoose.model("User", userSchema);
+
+app.get("/", (req, res) => {
   res.render("home");
 });
 
-app.get("/login", (rq, res) => {
-  res.render("login");
+app
+  .route("/login")
+
+  .get((req, res) => {
+    res.render("login");
+  })
+
+  .post((req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    User.findOne({ email: username }, function (err, foundUser) {
+      if (err) {
+        console.log(err);
+      } else {
+        if (foundUser) {
+          if (foundUser.password === password) {
+            res.render("secrets");
+          } else {
+            res.redirect("#");
+          }
+        } else {
+          res.redirect("#");
+        }
+      }
+    });
+  });
+
+app.get("/logout", (req, res) => {
+  res.redirect("/");
 });
 
-app.get("/register", (rq, res) => {
-  res.render("register");
-});
+app
+  .route("/register")
+
+  .get((req, res) => {
+    res.render("register");
+  })
+
+  .post((req, res) => {
+    const newUser = new User({
+      email: req.body.username,
+      password: req.body.password,
+    });
+    newUser.save((err) => {
+      if (err) {
+        console.log(err);
+      } else {
+        res.render("secrets");
+      }
+    });
+  });
 
 app.listen(3000, () => {
   console.log("Server running on port localhost:3000");
