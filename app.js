@@ -68,15 +68,26 @@ app
   })
 
   .post((req, res) => {
-    const newUser = new User({
-      email: req.body.username,
-      password: md5(req.body.password),
-    });
-    newUser.save((err) => {
-      if (err) {
-        console.log(err);
+    username = req.body.username;
+    User.exists({ email: username }, function (err, exists) {
+      if (!err) {
+        if (!exists) {
+          const newUser = new User({
+            email: req.body.username,
+            password: md5(req.body.password),
+          });
+          newUser.save((err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              res.render("secrets");
+            }
+          });
+        } else {
+          res.redirect("#");
+        }
       } else {
-        res.render("secrets");
+        console.log(err);
       }
     });
   });
