@@ -2,6 +2,7 @@
   "name": "Secrets",
   "version": "1.0.0",
   "description": "",
+  "type": "require",
   "main": "app.js",
   "dependencies": {
     "bcrypt": "^5.0.0",
@@ -13,6 +14,7 @@
     "express-session": "^1.17.1",
     "mongoose": "^5.11.17",
     "mongoose-encryption": "^2.0.3",
+    "nodemon": "^2.0.7",
     "passport": "^0.4.1",
     "passport-local": "^1.0.0",
     "passport-local-mongoose": "^6.1.0"
