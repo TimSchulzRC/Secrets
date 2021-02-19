@@ -4,7 +4,8 @@ const express = require("express");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
 const encrypt = require("mongoose-encryption");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 const app = express();
 
 app.use(express.static("public"));
@@ -72,16 +73,18 @@ app
     User.exists({ email: username }, function (err, exists) {
       if (!err) {
         if (!exists) {
-          const newUser = new User({
-            email: req.body.username,
-            password: md5(req.body.password),
-          });
-          newUser.save((err) => {
-            if (err) {
-              console.log(err);
-            } else {
-              res.render("secrets");
-            }
+          bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+            const newUser = new User({
+              email: req.body.username,
+              password: hash,
+            });
+            newUser.save((err) => {
+              if (err) {
+                console.log(err);
+              } else {
+                res.render("secrets");
+              }
+            });
           });
         } else {
           res.redirect("#");
