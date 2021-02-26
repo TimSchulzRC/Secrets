@@ -53,6 +53,14 @@ app.get("/", (req, res) => {
   res.render("home");
 });
 
+app.get("/secrets", function (req, res) {
+  if (req.isAuthenticated()) {
+    res.render("secrets");
+  } else {
+    res.redirect("/login");
+  }
+});
+
 app
   .route("/login")
 
@@ -61,29 +69,25 @@ app
   })
 
   .post((req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
+    const user = new User({
+      username: req.body.username,
+      password: req.body.password,
+    });
 
-    User.findOne({ email: username }, function (err, foundUser) {
+    req.login(user, function (err) {
       if (err) {
         console.log(err);
+        res.redirect("/login");
       } else {
-        if (foundUser) {
-          bcrypt.compare(password, foundUser.password, function (err, result) {
-            if (result == true) {
-              res.render("secrets");
-            } else {
-              res.redirect("#");
-            }
-          });
-        } else {
-          res.redirect("#");
-        }
+        passport.authenticate("local")(req, res, function () {
+          res.redirect("/secrets");
+        });
       }
     });
   });
 
 app.get("/logout", (req, res) => {
+  req.logout();
   res.redirect("/");
 });
 
@@ -95,30 +99,20 @@ app
   })
 
   .post((req, res) => {
-    username = req.body.username;
-    User.exists({ email: username }, function (err, exists) {
-      if (!err) {
-        if (!exists) {
-          bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
-            const newUser = new User({
-              email: req.body.username,
-              password: hash,
-            });
-            newUser.save((err) => {
-              if (err) {
-                console.log(err);
-              } else {
-                res.render("secrets");
-              }
-            });
-          });
+    User.register(
+      { username: req.body.username },
+      req.body.password,
+      function (err, user) {
+        if (err) {
+          console.log(err);
+          res.redirect("/register");
         } else {
-          res.redirect("#");
+          passport.authenticate("local")(req, res, function () {
+            res.redirect("/secrets");
+          });
         }
-      } else {
-        console.log(err);
       }
-    });
+    );
   });
 
 app.listen(3000, () => {
