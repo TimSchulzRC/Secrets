@@ -44,6 +44,7 @@ const userSchema = new mongoose.Schema({
   password: String,
   googleId: String,
   githubId: String,
+  secret: String,
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -132,7 +133,7 @@ app.get(
   "/auth/github/secrets",
   passport.authenticate("github", { failureRedirect: "/" }),
   function (req, res) {
-    // Successful authentication, redirect home.
+    // Successful authentication, redirect to secrets.
     res.redirect("/secrets");
   }
 );
@@ -200,7 +201,36 @@ app
     );
   });
 
-//////////////////////////////
+///////// Submit /////////
+
+app.get("/submit", function (req, res) {
+  if (req.isAuthenticated()) {
+    res.render("submit");
+  } else {
+    res.redirect("/login");
+  }
+});
+
+app.post("/submit", function (req, res) {
+  const newSecret = req.body.secret;
+
+  console.log(req.user.id);
+
+  User.findById(req.user.id, function (err, foundUser) {
+    if (err) {
+      console.log(err);
+    } else {
+      if (foundUser) {
+        foundUser.secret = newSecret;
+        foundUser.save(function () {
+          res.redirect("/secrets");
+        });
+      }
+    }
+  });
+});
+
+///////// Logout /////////
 
 app.get("/logout", (req, res) => {
   req.logout();
