@@ -8,6 +8,7 @@ const session = require("express-session");
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const GitHubStrategy = require("passport-github2");
 const findOrCreate = require("mongoose-findorcreate");
 
 const saltRounds = 10;
@@ -42,6 +43,7 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
+  githubId: String,
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -59,17 +61,23 @@ passport.deserializeUser(function (id, done) {
   });
 });
 
+////////// Home route ///////////
+
+app.get("/", (req, res) => {
+  res.render("home");
+});
+
+////////// Google Authentication //////////
+
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientID: process.env.GOOGLE_CLIENT_ID, // located in .env file
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET, // located in .env file
       callbackURL: "http://localhost:3000/auth/google/secrets",
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
     },
     function (accessToken, refreshToken, profile, cb) {
-      console.log(profile);
-      console.log(profile.emails);
       User.findOrCreate(
         { email: profile.emails[0].value, googleId: profile.id },
         function (err, user) {
@@ -79,10 +87,6 @@ passport.use(
     }
   )
 );
-
-app.get("/", (req, res) => {
-  res.render("home");
-});
 
 app.get(
   "/auth/google",
@@ -98,6 +102,43 @@ app.get(
   }
 );
 
+////////// GitHub Authentication //////////
+
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID, // located in .env file
+      clientSecret: process.env.GITHUB_CLIENT_SECRET, // located in .env file
+      callbackURL: "http://localhost:3000/auth/github/secrets",
+    },
+    function (accessToken, refreshToken, profile, done) {
+      console.log(profile);
+      User.findOrCreate(
+        { email: profile.email, githubId: profile.id },
+        function (err, user) {
+          return done(err, user);
+        }
+      );
+    }
+  )
+);
+
+app.get(
+  "/auth/github",
+  passport.authenticate("github", { scope: ["user:email"] })
+);
+
+app.get(
+  "/auth/github/secrets",
+  passport.authenticate("github", { failureRedirect: "/" }),
+  function (req, res) {
+    // Successful authentication, redirect home.
+    res.redirect("/secrets");
+  }
+);
+
+////////// Secrets Page //////////
+
 app.get("/secrets", function (req, res) {
   if (req.isAuthenticated()) {
     res.render("secrets");
@@ -105,6 +146,8 @@ app.get("/secrets", function (req, res) {
     res.redirect("/login");
   }
 });
+
+////////// Login //////////
 
 app
   .route("/login")
@@ -131,10 +174,7 @@ app
     });
   });
 
-app.get("/logout", (req, res) => {
-  req.logout();
-  res.redirect("/");
-});
+////////// Register //////////
 
 app
   .route("/register")
@@ -159,6 +199,13 @@ app
       }
     );
   });
+
+//////////////////////////////
+
+app.get("/logout", (req, res) => {
+  req.logout();
+  res.redirect("/");
+});
 
 app.listen(3000, () => {
   console.log("Server running on port localhost:3000");
